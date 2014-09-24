@@ -11,5 +11,9 @@ You will need to specify three parameters on the kernel command line:
 
 For each path specified as an argument of the 'boot' kernel parameter, min-init will try to mount the corresponding drive with every filesystem type the kernel understands, until the mount eventually succeeds.
 
+To compile, pass your cross compiler to Make via the CC variable.
+For example:
+$ make CC=mipsel-gcw0-linux-uclibc-gcc
+
 Developed for OpenDingux (http://www.treewalker.org/opendingux/)
 By Paul Cercueil <paul@crapouillou.net>

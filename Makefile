@@ -1,7 +1,3 @@
-
-CROSS_COMPILE ?= mipsel-linux-
-COMPILER ?= gcc
-CC = $(CROSS_COMPILE)$(COMPILER)
 CFLAGS ?= -Wall -O2 -fomit-frame-pointer
 LDFLAGS = -s -static
 
