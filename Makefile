@@ -1,4 +1,4 @@
-CFLAGS ?= -Wall -O2 -fomit-frame-pointer
+CFLAGS ?= -std=c99 -Wall -O2 -fomit-frame-pointer
 LDFLAGS = -s -static
 
 MININIT = mininit

@@ -1,3 +1,4 @@
+#define _BSD_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,16 +33,15 @@ static void quit_hdl(int err)
 
 static int waitForEnter()
 {
-	struct input_event event;
-
 	fd = open(event_fn, O_RDONLY);
 	if (fd < 0) {
 		ERROR("Unable to open %s\n", event_fn);
 		return -1;
 	}
 
+	struct input_event event;
 	do {
-		while(read(fd, &event, sizeof(event)) < sizeof(event));
+		while(read(fd, &event, sizeof(event)) < (ssize_t)sizeof(event));
 	} while (event.code != MAGIC_KEY);
 	close(fd);
 	return 0;
@@ -49,9 +49,6 @@ static int waitForEnter()
 
 int main(int argc, char **argv)
 {
-	int res, argv0size = strlen(argv[0]);
-	char one = '1';
-
 	signal(SIGINT,  &quit_hdl);
 	signal(SIGSEGV, &quit_hdl);
 	signal(SIGTERM, &quit_hdl);
@@ -59,9 +56,9 @@ int main(int argc, char **argv)
 	if (fork())
 		execl(init_fn, "/init", NULL);
 
-	strlcpy(argv[0], process_name, argv0size);
+	strlcpy(argv[0], process_name, strlen(argv[0]));
 
-	res = waitForEnter();
+	int res = waitForEnter();
 	if (res)
 		return res;
 
@@ -76,6 +73,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	char one = '1';
 	write(fd, &one, sizeof(one));
 
 	close(fd);
