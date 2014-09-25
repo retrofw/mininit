@@ -194,9 +194,10 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
-
-	if (!boot)
-		WARNING("\'boot\' parameter not found.\n");
+	if (!boot) {
+		ERROR("\'boot\' parameter not found.\n");
+		return -1;
+	}
 
 	/* Check for a modules fs update */
 	if (!access("/boot/update_m.bin", R_OK | W_OK)) {
@@ -222,7 +223,7 @@ int main(int argc, char **argv)
 		sprintf(old, "%s.bak", name);
 
 		/* Check for a rootfs update */
-		if (boot && !access("/boot/update_r.bin", R_OK | W_OK)) {
+		if (!access("/boot/update_r.bin", R_OK | W_OK)) {
 			char sha1_file[128];
 			sprintf(sha1_file, "%s.sha1", name);
 
@@ -271,20 +272,18 @@ int main(int argc, char **argv)
 
 	/* Move the /boot mountpoint so that it is visible
 	 * on the new filesystem tree */
-	if (boot) {
-		DEBUG("Moving \'/boot\' mountpoint\n");
-		if ( mount("/boot", "/root/boot", NULL, MS_MOVE, NULL) ) {
-			ERROR("Unable to move the \'/boot\' mountpoint.\n");
-			return -1;
-		}
+	DEBUG("Moving \'/boot\' mountpoint\n");
+	if ( mount("/boot", "/root/boot", NULL, MS_MOVE, NULL) ) {
+		ERROR("Unable to move the \'/boot\' mountpoint.\n");
+		return -1;
+	}
 
-		/* Remount /boot readonly */
-		DEBUG("Remounting \'/root/boot\' read-only\n");
-		if ( mount("/root/boot", "/root/boot", NULL,
-						MS_REMOUNT | MS_RDONLY, NULL) ) {
-			ERROR("Unable to remount \'/root/boot\' read-only.\n");
-			return -1;
-		}
+	/* Remount /boot readonly */
+	DEBUG("Remounting \'/root/boot\' read-only\n");
+	if ( mount("/root/boot", "/root/boot", NULL,
+					MS_REMOUNT | MS_RDONLY, NULL) ) {
+		ERROR("Unable to remount \'/root/boot\' read-only.\n");
+		return -1;
 	}
 
 	/* Now let's switch to the new root */
