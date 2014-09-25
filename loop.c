@@ -1,5 +1,6 @@
 #include <sys/ioctl.h>
 
+#include <errno.h>
 #include <string.h>
 
 #include <linux/loop.h>
@@ -9,12 +10,14 @@
 
 int losetup(int loopfd, int filefd, const char *filename)
 {
+	struct loop_info64 lo;
+	if (strlen(filename) + 1 > sizeof(lo.lo_file_name)) return ENAMETOOLONG;
+
 	int ret = ioctl(loopfd, LOOP_SET_FD, filefd);
 	if (ret < 0) return ret;
 
-	struct loop_info64 lo;
 	memset(&lo, 0, sizeof(lo));
-	strncpy((char *)lo.lo_file_name, filename, LO_NAME_SIZE - 1);
+	strcpy((char *)lo.lo_file_name, filename);
 
 	return ioctl(loopfd, LOOP_SET_STATUS64, &lo);
 }
