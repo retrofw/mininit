@@ -1,18 +1,6 @@
-//===========================================================================
+#ifndef LOOP_H
+#define LOOP_H
 
-#ifndef __loop_h__
-#define __loop_h__
+int losetup(int loopfd, int filefd, const char *filename);
 
-//===========================================================================
-
-int losetup (
-	int loopfd,
-	int filefd,
-	const char *filename
-);
-
-int lodelete (int loopfd);
-
-//===========================================================================
-#endif
-
+#endif // LOOP_H

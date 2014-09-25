@@ -1,5 +1,3 @@
-//===========================================================================
-
 #include <sys/ioctl.h>
 
 #include <string.h>
@@ -8,29 +6,15 @@
 
 #include "loop.h"
 
-//===========================================================================
 
-int losetup (
-	int loopfd,
-	int filefd,
-	const char *filename
-) {
-	int r; struct loop_info64 lo;
+int losetup(int loopfd, int filefd, const char *filename)
+{
+	int ret = ioctl(loopfd, LOOP_SET_FD, filefd);
+	if (ret < 0) return ret;
 
-	r = ioctl(loopfd, LOOP_SET_FD, filefd);
-	if (r < 0) return r;
-
+	struct loop_info64 lo;
 	memset(&lo, 0, sizeof(lo));
 	strncpy((char *)lo.lo_file_name, filename, LO_NAME_SIZE - 1);
 
 	return ioctl(loopfd, LOOP_SET_STATUS64, &lo);
 }
-
-//===========================================================================
-
-int lodelete (int loopfd) {
-	return ioctl(loopfd, LOOP_CLR_FD, 0);
-}
-
-//===========================================================================
-
