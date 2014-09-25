@@ -156,6 +156,14 @@ int main(int argc, char **argv)
 				"by Ignacio Garcia Perez <iggarpe@gmail.com> "
 				"and Paul Cercueil <paul@crapouillou.net>\n");
 
+	/* Mount devtmpfs to get a full set of device nodes. */
+	DEBUG("Mounting /dev\n");
+	if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL)) {
+		INFO("Couldn't mount devtmpfs on /dev: %d\n", errno);
+		/* If there are sufficient static device nodes in the initramfs,
+		 * we can boot without devtmpfs. */
+	}
+
 	DEBUG("Mounting /proc\n");
 	if ( mount(NULL, "/proc", "proc", 0, NULL) ) {
 		ERROR("Unable to mount /proc\n");
