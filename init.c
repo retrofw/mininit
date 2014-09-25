@@ -172,25 +172,27 @@ int main(int argc, char **argv)
 	char * paramv[64];
 	int paramc = 1 + __mkparam(cbuf, paramv+1, sizeof(paramv)/sizeof(paramv[0]) -2, ' ');
 
+	/* Look for "rootfs_bak" parameter. */
+	bool is_backup = false;
+	for (int i=1; i<paramc; i++) {
+		if (!strcmp(paramv[i], "rootfs_bak")) {
+			is_backup = true;
+			break;
+		}
+	}
+
 	/* Process "boot" parameter
 	 * (only one, allow comma-separated list).
 	 * Note that we specify 20 retries (2 seconds), just in case it is
 	 * a hotplug device which takes some time to detect and initialize. */
 	bool boot = false;
-	bool is_backup = false;
 	for (int i=1; i<paramc; i++) {
-		if (!strcmp(paramv[i], "rootfs_bak"))
-			is_backup = true;
-
-		if (strncmp(paramv[i], "boot=", 5))
-			continue;
-
-		if ( __multi_mount(paramv[i]+5, "/boot", NULL, 0, 20) )
-			return -1;
-		boot = true;
-
-		if (boot && is_backup)
+		if (!strncmp(paramv[i], "boot=", 5)) {
+			if ( __multi_mount(paramv[i]+5, "/boot", NULL, 0, 20) )
+				return -1;
+			boot = true;
 			break;
+		}
 	}
 
 	if (!boot)
