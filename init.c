@@ -123,32 +123,6 @@ static int __multi_mount (
 	return -1;
 }
 
-static int __losetup (
-		const char *loop,
-		const char *file)
-{
-	int filefd = open(file, O_RDONLY);
-	if (filefd < 0) {
-		ERROR("losetup: cannot open \'%s\'.\n", file);
-		return -1;
-	}
-
-	int loopfd = open(loop, O_RDONLY);
-	if (loopfd < 0) {
-		ERROR("losetup: cannot open \'%s\'.\n", file);
-		close(filefd);
-		return -1;
-	}
-
-	int res = losetup(loopfd, filefd);
-	if (res < 0)
-		ERROR("Cannot setup loop device \'%s\'.\n", loop);
-
-	close(loopfd);
-	close(filefd);
-	return res;
-}
-
 
 int main(int argc, char **argv)
 {
@@ -256,9 +230,7 @@ int main(int argc, char **argv)
 		if (is_backup && !access(old, F_OK))
 			name = old;
 
-		DEBUG("Setting up loopback: \'%s\' associated to \'%s\'.\n",
-			loop_dev, name);
-		__losetup(loop_dev, name);
+		losetup(loop_dev, name);
 
 		/* Mount the loopback device that was just set up. */
 		if (__multi_mount(loop_dev, "/root", NULL, MS_RDONLY, 20)) {

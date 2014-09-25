@@ -1,6 +1,6 @@
 #ifndef LOOP_H
 #define LOOP_H
 
-int losetup(int loopfd, int filefd);
+int losetup(const char *loop, const char *file);
 
 #endif // LOOP_H
