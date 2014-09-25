@@ -140,7 +140,7 @@ static int __losetup (
 		return -1;
 	}
 
-	int res = losetup(loopfd, filefd, file);
+	int res = losetup(loopfd, filefd);
 	if (res < 0)
 		ERROR("Cannot setup loop device \'%s\'.\n", loop);
 
