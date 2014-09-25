@@ -4,7 +4,8 @@
 
 #include <string.h>
 
-#include "loop_info.h"
+#include <linux/loop.h>
+
 #include "loop.h"
 
 //===========================================================================
