@@ -209,6 +209,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Process "loop" parameter (only one) */
+	bool root = false;
 	for (int i=1; i<paramc; i++) {
 		char old[128], *name;
 
@@ -250,23 +251,18 @@ int main(int argc, char **argv)
 		DEBUG("Setting up loopback: \'%s\' associated to \'%s\'.\n",
 			loop_dev, name);
 		__losetup(loop_dev, name);
-		break;
-	}
 
-	/* Process "root" parameter (only one, allow comma-separated list).
-	 * Note that we specify 20 retries (2 seconds), just in case it is
-	 * a hotplug device which takes some time to detect and initialize. */
-	int i;
-	for (i=1; i<paramc; i++) {
-		if (strncmp(paramv[i], "root=", 5))
-			continue;
-		if ( __multi_mount(paramv[i]+5, "/root", NULL, MS_RDONLY, 20) )
+		/* Mount the loopback device that was just set up. */
+		if (__multi_mount(loop_dev, "/root", NULL, MS_RDONLY, 20)) {
 			return -1;
+		}
+
+		root = true;
 		break;
 	}
-	/* TODO: try with real-root-dev */
-	if (i >= paramc) {
-		ERROR("\'root\' parameter not found.\n");
+	if (!root) {
+		/* [0-7] because CONFIG_BLK_DEV_LOOP_MIN_COUNT=8 by default. */
+		ERROR("No \'loop[0-7]\' parameter found.\n");
 		return -1;
 	}
 
@@ -334,6 +330,7 @@ int main(int argc, char **argv)
 
 	/* Prepare paramv[0] which is the init program itself */
 	char sbuf [256];
+	int i;
 	for (i=1; i<paramc; i++) {
 		if (strncmp(paramv[i], "init=", 5))
 			continue;
