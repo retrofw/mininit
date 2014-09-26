@@ -261,35 +261,25 @@ int main(int argc, char **argv)
 	/* Release the old root */
 	close(fd);
 
-	/* Prepare paramv[0] which is the init program itself */
-	char sbuf [256];
-	int i;
-	for (i=1; i<paramc; i++) {
-		if (strncmp(paramv[i], "init=", 5))
-			continue;
-		strcpy(sbuf, paramv[i]+5);
-		break;
-	}
-
-	/* If no 'init=' is found on the command line, we try to
-	 * locate the init program. */
-	if (i >= paramc) {
-		const char *inits [] = {
-			"/sbin/init",
-			"/etc/init",
-			"/bin/init",
-			"/bin/sh",
-			NULL,
-		};
-		for (i=0; inits[i] && access(inits[i], X_OK)<0; i++);
+	/* Try to locate the init program. */
+	const char *inits[] = {
+		"/sbin/init",
+		"/etc/init",
+		"/bin/init",
+		"/bin/sh",
+		NULL,
+	};
+	for (int i = 0; ; i++) {
 		if (!inits[i]) {
-			ERROR("Unable to find the \'init\' executable.\n");
+			ERROR("Unable to find the 'init' executable.\n");
 			return -1;
 		}
-		strcpy(sbuf, inits[i]);
+		if (!access(inits[i], X_OK)) {
+			DEBUG("Found 'init' executable: %s\n", inits[i]);
+			paramv[0] = (char *)inits[i];
+			break;
+		}
 	}
-
-	paramv[0] = sbuf;
 
 	/* Execute the 'init' executable */
 	execv(paramv[0], paramv);
