@@ -30,7 +30,7 @@
 #define ROOTFS_UPDATE  "/boot/update_r.bin"
 
 
-static int __multi_mount (
+static int multi_mount(
 		char *source,
 		const char *target,
 		const char *type,
@@ -85,11 +85,11 @@ int main(int argc, char **argv, char **envp)
 	 * a hotplug device which takes some time to detect and initialize. */
 	char *boot = getenv("boot");
 	if (boot) {
-		if (__multi_mount(boot, "/boot", BOOTFS_TYPE, 0, 20)) {
+		if (multi_mount(boot, "/boot", BOOTFS_TYPE, 0, 20)) {
 			return -1;
 		}
 	} else {
-		ERROR("\'boot\' parameter not found.\n");
+		ERROR("'boot' parameter not found.\n");
 		return -1;
 	}
 
@@ -143,17 +143,16 @@ int main(int argc, char **argv, char **envp)
 
 	/* Move the /boot mountpoint so that it is visible
 	 * on the new filesystem tree */
-	DEBUG("Moving \'/boot\' mountpoint\n");
-	if ( mount("/boot", "/root/boot", NULL, MS_MOVE, NULL) ) {
-		ERROR("Unable to move the \'/boot\' mountpoint.\n");
+	DEBUG("Moving '/boot' mountpoint\n");
+	if (mount("/boot", "/root/boot", NULL, MS_MOVE, NULL)) {
+		ERROR("Unable to move the '/boot' mountpoint.\n");
 		return -1;
 	}
 
 	/* Remount /boot readonly */
-	DEBUG("Remounting \'/root/boot\' read-only\n");
-	if ( mount("/root/boot", "/root/boot", NULL,
-					MS_REMOUNT | MS_RDONLY, NULL) ) {
-		ERROR("Unable to remount \'/root/boot\' read-only.\n");
+	DEBUG("Remounting '/root/boot' read-only\n");
+	if (mount("/root/boot", "/root/boot", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
+		ERROR("Unable to remount '/root/boot' read-only.\n");
 		return -1;
 	}
 
@@ -161,7 +160,7 @@ int main(int argc, char **argv, char **envp)
 	DEBUG("Switching root\n");
 
 	if (chdir("/root") < 0) {
-		ERROR("Unable to change to \'/root\' directory.\n");
+		ERROR("Unable to change to '/root' directory.\n");
 		return -1;
 	}
 
@@ -185,14 +184,14 @@ int main(int argc, char **argv, char **envp)
 	fd = open("/", O_RDONLY, 0);
 
 	/* Do the root switch */
-	if ( mount(".", "/", NULL, MS_MOVE, NULL) ) {
+	if (mount(".", "/", NULL, MS_MOVE, NULL)) {
 		ERROR("Unable to switch to the new root.\n");
 		close(fd);
 		return -1;
 	}
 
 	if ((chroot(".") < 0) || (chdir("/") < 0)) {
-		ERROR("\'chroot\' failed.\n");
+		ERROR("'chroot' failed.\n");
 		close(fd);
 		return -1;
 	}
