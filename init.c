@@ -20,7 +20,8 @@
 #include "loop.h"
 
 
-#define ROOTFS_CURRENT "/boot/rootfs.squashfs"
+#define ROOTFS_TYPE    "squashfs"
+#define ROOTFS_CURRENT "/boot/rootfs." ROOTFS_TYPE
 #define ROOTFS_BACKUP  ROOTFS_CURRENT ".bak"
 #define ROOTFS_UPDATE  "/boot/update_r.bin"
 
@@ -230,7 +231,8 @@ int main(int argc, char **argv)
 	losetup(loop_dev, rootfs);
 
 	/* Mount the loop device that was just set up. */
-	if (__multi_mount(loop_dev, "/root", NULL, MS_RDONLY, 20)) {
+	if (mount(loop_dev, "/root", ROOTFS_TYPE, MS_RDONLY, NULL)) {
+		ERROR("Failed to mount the rootfs image.\n");
 		return -1;
 	}
 
