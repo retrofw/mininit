@@ -30,45 +30,6 @@
 #define ROOTFS_UPDATE  "/boot/update_r.bin"
 
 
-/* Split the passed buffer as a list of parameters. */
-static int __mkparam (char *buf, char **paramv, int maxparam, const char delim)
-{
-	paramv[0] = strtok(buf, &delim);
-	if (!paramv[0])
-		return 0;
-
-	int paramc;
-	for (paramc=1; ; paramc++) {
-		paramv[paramc] = strtok(NULL, &delim);
-		if (!paramv[paramc]) break;
-	}
-
-	return paramc;
-}
-
-static int __read_text_file (const char *fn, char *buf, size_t len)
-{
-	int fd = open(fn, O_RDONLY);
-	if (fd < 0) {
-		ERROR("Unable to open \'%s\'.\n", fn);
-		return fd;
-	}
-
-	int r = read(fd, buf, len-1);
-	close(fd);
-	if (r < 0) {
-		ERROR("Unable to read \'%s\'.\n", fn);
-		return r;
-	}
-
-	/* Skip the last \n */
-	if (r && (buf[r-1] == '\n'))
-		buf[r-1] = '\0';
-
-	buf[r] = '\0';
-	return 0;
-}
-
 static int __multi_mount (
 		char *source,
 		const char *target,
@@ -109,22 +70,6 @@ int main(int argc, char **argv, char **envp)
 		/* If there are sufficient static device nodes in the initramfs,
 		 * we can boot without devtmpfs. */
 	}
-
-	DEBUG("Mounting /proc\n");
-	if ( mount(NULL, "/proc", "proc", 0, NULL) ) {
-		ERROR("Unable to mount /proc\n");
-		return -1;
-	}
-
-	DEBUG("Reading kernel command line\n");
-	char cbuf[4096];
-	if (__read_text_file("/proc/cmdline", cbuf, sizeof(cbuf)))
-		return -1;
-	DEBUG("Command line read: %s\n", cbuf);
-
-	/* paramv[0] and paramv[paramc] are reserved */
-	char * paramv[64];
-	int paramc = 1 + __mkparam(cbuf, paramv+1, sizeof(paramv)/sizeof(paramv[0]) -2, ' ');
 
 	/* Look for "rootfs_bak" parameter. */
 	bool is_backup = false;
@@ -238,9 +183,6 @@ int main(int argc, char **argv, char **envp)
 
 	/* Keep the old root open until the chroot is done */
 	fd = open("/", O_RDONLY, 0);
-
-	/* Unmount the previously mounted /proc filesystem. */
-	umount("/proc");
 
 	/* Do the root switch */
 	if ( mount(".", "/", NULL, MS_MOVE, NULL) ) {
