@@ -67,45 +67,6 @@ static int __read_text_file (const char *fn, char *buf, size_t len)
 	return 0;
 }
 
-static int __mount (
-		const char *source,
-		const char *target,
-		const char *type,
-		unsigned long flags)
-{
-	int nb;
-	char cbuf[4096];
-	char * tokens[64];
-
-	if (type || (flags & MS_MOVE))
-		return mount(source, target, type, flags, NULL);
-
-	/* The filesystem is unknown.
-	 * We will try each filesystem supported by the kernel. */
-	if (__read_text_file("/proc/filesystems", cbuf, sizeof(cbuf)))
-		return -1;
-
-	nb = __mkparam(cbuf, tokens, sizeof(tokens)/sizeof(tokens[0]), '\n');
-
-	while (nb--) {
-		/* note: the possible filesystems all start with a
-		 * tabulation in that file, except ubifs */
-		if (!strncmp(tokens[nb], "nodev\tubifs", 11))
-			tokens[nb] += 5;
-		else if (*tokens[nb] != '\t')
-			continue;
-
-		/* skip the tabulation */
-		tokens[nb]++;
-
-		if (!mount(source, target, tokens[nb], flags, NULL))
-			return 0;
-	}
-
-	DEBUG("Failed attempt to mount %s on %s\n", source, target);
-	return -1;
-}
-
 static int __multi_mount (
 		char *source,
 		const char *target,
@@ -120,7 +81,7 @@ static int __multi_mount (
 			c = *s;
 			*s = '\0';
 
-			if (!__mount(t, target, type, flags)) {
+			if (!mount(t, target, type, flags, NULL)) {
 				INFO("%s mounted on %s\n", t, target);
 				*s = c;
 				return 0;
