@@ -1,4 +1,5 @@
 #define _BSD_SOURCE
+#define _GNU_SOURCE
 
 #include <sys/mount.h>
 #include <sys/types.h>
@@ -95,7 +96,7 @@ static int __multi_mount (
 }
 
 
-int main(int argc, char **argv)
+int main(int argc, char **argv, char **envp)
 {
 	INFO("\n\n\nOpenDingux min-init 1.1.0 "
 				"by Ignacio Garcia Perez <iggarpe@gmail.com> "
@@ -278,7 +279,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Execute the 'init' executable */
-	execv(argv[0], argv);
+	execvpe(argv[0], argv, envp);
 	ERROR("exec or init failed.\n");
 	return 0;
 }
