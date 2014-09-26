@@ -198,10 +198,6 @@ int main(int argc, char **argv)
 		if (strncmp(paramv[i], "loop", 4)
 			|| paramv[i][5] != '=') continue;
 
-		/* update the loop device filename if needed */
-		char loop_dev[11] = "/dev/loop0";
-		loop_dev[9] = paramv[i][4];
-
 		name = paramv[i] + 6;
 		sprintf(old, "%s.bak", name);
 
@@ -229,6 +225,16 @@ int main(int argc, char **argv)
 
 		if (is_backup && !access(old, F_OK))
 			name = old;
+
+		int devnr = logetfree();
+		if (devnr < 0) {
+			/* We're running early in the boot sequence, probably /dev/loop0
+			 * is still available. */
+			devnr = 0;
+		}
+
+		char loop_dev[9 + 10 + 1];
+		sprintf(loop_dev, "/dev/loop%i", devnr);
 
 		losetup(loop_dev, name);
 

@@ -9,6 +9,25 @@
 #include "loop.h"
 
 
+int logetfree()
+{
+	int fd = open("/dev/loop-control", O_RDWR);
+	if (fd < 0) {
+		WARNING("Failed to open /dev/loop-control.\n");
+		return -1;
+	}
+
+	int devnr = ioctl(fd, LOOP_CTL_GET_FREE);
+	if (devnr < 0) {
+		WARNING("Failed to acquire free loop device.\n");
+	} else {
+		DEBUG("Got free loop device: %d.\n", devnr);
+	}
+
+	close(fd);
+	return devnr;
+}
+
 int losetup(const char *loop, const char *file)
 {
 	DEBUG("Setting up loop: '%s' via '%s'.\n", file, loop);
