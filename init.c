@@ -57,6 +57,35 @@ static int multi_mount(
 }
 
 
+void perform_updates(bool is_backup)
+{
+	/* Check for a modules fs update */
+	if (!access("/boot/update_m.bin", R_OK | W_OK)) {
+		DEBUG("Modules update found!\n");
+		rename("/boot/modules.squashfs", "/boot/modules.squashfs.bak");
+		rename("/boot/modules.squashfs.sha1", "/boot/modules.squashfs.bak.sha1");
+		rename("/boot/update_m.bin", "/boot/modules.squashfs");
+		rename("/boot/update_m.bin.sha1", "/boot/modules.squashfs.sha1");
+	}
+
+	/* Check for a rootfs update */
+	if (!access("/boot/update_r.bin", R_OK | W_OK)) {
+		DEBUG("RootFS update found!\n");
+
+		/* If rootfs_bak was not passed, or the backup is not available,
+		 * make a backup of the current rootfs before the update */
+		if (!is_backup || access(ROOTFS_BACKUP, F_OK)) {
+			rename(ROOTFS_CURRENT, ROOTFS_BACKUP);
+			rename(ROOTFS_CURRENT ".sha1", ROOTFS_BACKUP ".sha1");
+		}
+
+		rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
+		rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
+		sync();
+	}
+}
+
+
 int main(int argc, char **argv, char **envp)
 {
 	INFO("\n\n\nOpenDingux min-init 1.1.0 "
@@ -93,30 +122,7 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
-	/* Check for a modules fs update */
-	if (!access("/boot/update_m.bin", R_OK | W_OK)) {
-		DEBUG("Modules update found!\n");
-		rename("/boot/modules.squashfs", "/boot/modules.squashfs.bak");
-		rename("/boot/modules.squashfs.sha1", "/boot/modules.squashfs.bak.sha1");
-		rename("/boot/update_m.bin", "/boot/modules.squashfs");
-		rename("/boot/update_m.bin.sha1", "/boot/modules.squashfs.sha1");
-	}
-
-	/* Check for a rootfs update */
-	if (!access("/boot/update_r.bin", R_OK | W_OK)) {
-		DEBUG("RootFS update found!\n");
-
-		/* If rootfs_bak was not passed, or the backup is not available,
-		 * make a backup of the current rootfs before the update */
-		if (!is_backup || access(ROOTFS_BACKUP, F_OK)) {
-			rename(ROOTFS_CURRENT, ROOTFS_BACKUP);
-			rename(ROOTFS_CURRENT ".sha1", ROOTFS_BACKUP ".sha1");
-		}
-
-		rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
-		rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
-		sync();
-	}
+	perform_updates(is_backup);
 
 	/* Get free loop device. */
 	int devnr = logetfree();
