@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -126,27 +127,22 @@ int main(int argc, char **argv)
 
 	/* Look for "rootfs_bak" parameter. */
 	bool is_backup = false;
-	for (int i=1; i<paramc; i++) {
-		if (!strcmp(paramv[i], "rootfs_bak")) {
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "rootfs_bak")) {
 			is_backup = true;
 			break;
 		}
 	}
 
-	/* Process "boot" parameter
-	 * (only one, allow comma-separated list).
+	/* Process "boot" parameter (comma-separated list).
 	 * Note that we specify 20 retries (2 seconds), just in case it is
 	 * a hotplug device which takes some time to detect and initialize. */
-	bool boot = false;
-	for (int i=1; i<paramc; i++) {
-		if (!strncmp(paramv[i], "boot=", 5)) {
-			if ( __multi_mount(paramv[i]+5, "/boot", BOOTFS_TYPE, 0, 20) )
-				return -1;
-			boot = true;
-			break;
+	char *boot = getenv("boot");
+	if (boot) {
+		if (__multi_mount(boot, "/boot", BOOTFS_TYPE, 0, 20)) {
+			return -1;
 		}
-	}
-	if (!boot) {
+	} else {
 		ERROR("\'boot\' parameter not found.\n");
 		return -1;
 	}
@@ -276,13 +272,13 @@ int main(int argc, char **argv)
 		}
 		if (!access(inits[i], X_OK)) {
 			DEBUG("Found 'init' executable: %s\n", inits[i]);
-			paramv[0] = (char *)inits[i];
+			argv[0] = (char *)inits[i];
 			break;
 		}
 	}
 
 	/* Execute the 'init' executable */
-	execv(paramv[0], paramv);
+	execv(argv[0], argv);
 	ERROR("exec or init failed.\n");
 	return 0;
 }
