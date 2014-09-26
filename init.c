@@ -19,6 +19,12 @@
 #include "debug.h"
 #include "loop.h"
 
+
+#define ROOTFS_CURRENT "/boot/rootfs.squashfs"
+#define ROOTFS_BACKUP  ROOTFS_CURRENT ".bak"
+#define ROOTFS_UPDATE  "/boot/update_r.bin"
+
+
 /* Split the passed buffer as a list of parameters. */
 static int __mkparam (char *buf, char **paramv, int maxparam, const char delim)
 {
@@ -190,65 +196,41 @@ int main(int argc, char **argv)
 		rename("/boot/update_m.bin.sha1", "/boot/modules.squashfs.sha1");
 	}
 
-	/* Process "loop" parameter (only one) */
-	bool root = false;
-	for (int i=1; i<paramc; i++) {
-		char old[128], *name;
+	/* Check for a rootfs update */
+	if (!access("/boot/update_r.bin", R_OK | W_OK)) {
+		DEBUG("RootFS update found!\n");
 
-		if (strncmp(paramv[i], "loop", 4)
-			|| paramv[i][5] != '=') continue;
-
-		name = paramv[i] + 6;
-		sprintf(old, "%s.bak", name);
-
-		/* Check for a rootfs update */
-		if (!access("/boot/update_r.bin", R_OK | W_OK)) {
-			char sha1_file[128];
-			sprintf(sha1_file, "%s.sha1", name);
-
-			DEBUG("RootFS update found!\n");
-
-			/* If rootfs_bak was not passed, or the backup is not available,
-			 * make a backup of the current rootfs before the update */
-			if (!is_backup || access(old, F_OK)) {
-				char old_sha1_file[128];
-				sprintf(old_sha1_file, "%s.sha1", old);
-
-				rename(name, old);
-				rename(sha1_file, old_sha1_file);
-			}
-
-			rename("/boot/update_r.bin", name);
-			rename("/boot/update_r.bin.sha1", sha1_file);
-			sync();
+		/* If rootfs_bak was not passed, or the backup is not available,
+		 * make a backup of the current rootfs before the update */
+		if (!is_backup || access(ROOTFS_BACKUP, F_OK)) {
+			rename(ROOTFS_CURRENT, ROOTFS_BACKUP);
+			rename(ROOTFS_CURRENT ".sha1", ROOTFS_BACKUP ".sha1");
 		}
 
-		if (is_backup && !access(old, F_OK))
-			name = old;
-
-		int devnr = logetfree();
-		if (devnr < 0) {
-			/* We're running early in the boot sequence, probably /dev/loop0
-			 * is still available. */
-			devnr = 0;
-		}
-
-		char loop_dev[9 + 10 + 1];
-		sprintf(loop_dev, "/dev/loop%i", devnr);
-
-		losetup(loop_dev, name);
-
-		/* Mount the loopback device that was just set up. */
-		if (__multi_mount(loop_dev, "/root", NULL, MS_RDONLY, 20)) {
-			return -1;
-		}
-
-		root = true;
-		break;
+		rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
+		rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
+		sync();
 	}
-	if (!root) {
-		/* [0-7] because CONFIG_BLK_DEV_LOOP_MIN_COUNT=8 by default. */
-		ERROR("No \'loop[0-7]\' parameter found.\n");
+
+	/* Get free loop device. */
+	int devnr = logetfree();
+	if (devnr < 0) {
+		/* We're running early in the boot sequence, probably /dev/loop0
+		 * is still available. */
+		devnr = 0;
+	}
+	char loop_dev[9 + 10 + 1];
+	sprintf(loop_dev, "/dev/loop%i", devnr);
+
+	/* Set the rootfs as the backing file for the loop device. */
+	const char *rootfs =
+		  is_backup && !access(ROOTFS_BACKUP, F_OK)
+		? ROOTFS_BACKUP
+		: ROOTFS_CURRENT;
+	losetup(loop_dev, rootfs);
+
+	/* Mount the loop device that was just set up. */
+	if (__multi_mount(loop_dev, "/root", NULL, MS_RDONLY, 20)) {
 		return -1;
 	}
 
