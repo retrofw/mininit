@@ -20,6 +20,8 @@
 #include "loop.h"
 
 
+#define BOOTFS_TYPE    "vfat"
+
 #define ROOTFS_TYPE    "squashfs"
 #define ROOTFS_CURRENT "/boot/rootfs." ROOTFS_TYPE
 #define ROOTFS_BACKUP  ROOTFS_CURRENT ".bak"
@@ -177,7 +179,7 @@ int main(int argc, char **argv)
 	bool boot = false;
 	for (int i=1; i<paramc; i++) {
 		if (!strncmp(paramv[i], "boot=", 5)) {
-			if ( __multi_mount(paramv[i]+5, "/boot", NULL, 0, 20) )
+			if ( __multi_mount(paramv[i]+5, "/boot", BOOTFS_TYPE, 0, 20) )
 				return -1;
 			boot = true;
 			break;
