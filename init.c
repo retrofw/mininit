@@ -59,8 +59,17 @@ static int multi_mount(
 
 void perform_updates(bool is_backup)
 {
-	/* Check for a modules fs update */
-	if (!access("/boot/update_m.bin", R_OK | W_OK)) {
+	bool update_modules = !access("/boot/update_m.bin", R_OK);
+	bool update_rootfs = !access("/boot/update_r.bin", R_OK);
+	if (!update_modules && !update_rootfs) return;
+
+	DEBUG("Remounting '/boot' read-write\n");
+	if (mount("/boot", "/boot", NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
+		ERROR("Unable to remount '/boot' read-write.\n");
+		return;
+	}
+
+	if (update_modules) {
 		DEBUG("Modules update found!\n");
 		rename("/boot/modules.squashfs", "/boot/modules.squashfs.bak");
 		rename("/boot/modules.squashfs.sha1", "/boot/modules.squashfs.bak.sha1");
@@ -68,8 +77,7 @@ void perform_updates(bool is_backup)
 		rename("/boot/update_m.bin.sha1", "/boot/modules.squashfs.sha1");
 	}
 
-	/* Check for a rootfs update */
-	if (!access("/boot/update_r.bin", R_OK | W_OK)) {
+	if (update_rootfs) {
 		DEBUG("RootFS update found!\n");
 
 		/* If rootfs_bak was not passed, or the backup is not available,
@@ -81,7 +89,13 @@ void perform_updates(bool is_backup)
 
 		rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
 		rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
-		sync();
+	}
+
+	sync();
+
+	DEBUG("Remounting '/boot' read-only\n");
+	if (mount("/boot", "/boot", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
+		ERROR("Unable to remount '/boot' read-only.\n");
 	}
 }
 
@@ -114,7 +128,7 @@ int main(int argc, char **argv, char **envp)
 	 * a hotplug device which takes some time to detect and initialize. */
 	char *boot = getenv("boot");
 	if (boot) {
-		if (multi_mount(boot, "/boot", BOOTFS_TYPE, 0, 20)) {
+		if (multi_mount(boot, "/boot", BOOTFS_TYPE, MS_RDONLY, 20)) {
 			return -1;
 		}
 	} else {
@@ -152,13 +166,6 @@ int main(int argc, char **argv, char **envp)
 	DEBUG("Moving '/boot' mountpoint\n");
 	if (mount("/boot", "/root/boot", NULL, MS_MOVE, NULL)) {
 		ERROR("Unable to move the '/boot' mountpoint.\n");
-		return -1;
-	}
-
-	/* Remount /boot readonly */
-	DEBUG("Remounting '/root/boot' read-only\n");
-	if (mount("/root/boot", "/root/boot", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
-		ERROR("Unable to remount '/root/boot' read-only.\n");
 		return -1;
 	}
 
