@@ -15,3 +15,7 @@ clean:
 
 mininit: $(M_OBJS)
 splashkill: $(S_OBJS)
+
+# Don't bother with fine-grained dependency tracking: just recompile everything
+# on any header change.
+$(M_OBJS) $(S_OBJS): $(wildcard *.h)
