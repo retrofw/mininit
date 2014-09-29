@@ -4,7 +4,7 @@ LDFLAGS = -s -static
 MININIT = mininit
 SPLASHKILL = splashkill
 
-M_OBJS = loop.o init.o
+M_OBJS = mininit.o loop.o
 S_OBJS = splashkill.o
 
 .PHONY: all clean
