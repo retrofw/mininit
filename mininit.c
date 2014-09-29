@@ -25,9 +25,9 @@
 #define BOOTFS_TYPE    "vfat"
 
 #define ROOTFS_TYPE    "squashfs"
-#define ROOTFS_CURRENT "/boot/rootfs." ROOTFS_TYPE
+#define ROOTFS_CURRENT "rootfs." ROOTFS_TYPE
 #define ROOTFS_BACKUP  ROOTFS_CURRENT ".bak"
-#define ROOTFS_UPDATE  "/boot/update_r.bin"
+#define ROOTFS_UPDATE  "update_r.bin"
 
 
 static int multi_mount(
@@ -57,24 +57,29 @@ static int multi_mount(
 }
 
 
-void perform_updates(bool is_backup)
+void perform_updates(const char *boot_mount, bool is_backup)
 {
-	bool update_modules = !access("/boot/update_m.bin", R_OK);
-	bool update_rootfs = !access("/boot/update_r.bin", R_OK);
+	if (chdir(boot_mount) < 0) {
+		ERROR("Unable to change to '%s' directory.\n", boot_mount);
+		return;
+	}
+
+	bool update_modules = !access("update_m.bin", R_OK);
+	bool update_rootfs = !access("update_r.bin", R_OK);
 	if (!update_modules && !update_rootfs) return;
 
-	DEBUG("Remounting '/boot' read-write\n");
-	if (mount("/boot", "/boot", NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
-		ERROR("Unable to remount '/boot' read-write.\n");
+	DEBUG("Remounting '%s' read-write\n", boot_mount);
+	if (mount(NULL, boot_mount, NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
+		ERROR("Unable to remount '%s' read-write.\n", boot_mount);
 		return;
 	}
 
 	if (update_modules) {
 		DEBUG("Modules update found!\n");
-		rename("/boot/modules.squashfs", "/boot/modules.squashfs.bak");
-		rename("/boot/modules.squashfs.sha1", "/boot/modules.squashfs.bak.sha1");
-		rename("/boot/update_m.bin", "/boot/modules.squashfs");
-		rename("/boot/update_m.bin.sha1", "/boot/modules.squashfs.sha1");
+		rename("modules.squashfs", "modules.squashfs.bak");
+		rename("modules.squashfs.sha1", "modules.squashfs.bak.sha1");
+		rename("update_m.bin", "modules.squashfs");
+		rename("update_m.bin.sha1", "modules.squashfs.sha1");
 	}
 
 	if (update_rootfs) {
@@ -93,9 +98,9 @@ void perform_updates(bool is_backup)
 
 	sync();
 
-	DEBUG("Remounting '/boot' read-only\n");
-	if (mount("/boot", "/boot", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
-		ERROR("Unable to remount '/boot' read-only.\n");
+	DEBUG("Remounting '%s' read-only\n", boot_mount);
+	if (mount(NULL, boot_mount, NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
+		ERROR("Unable to remount '%s' read-only.\n", boot_mount);
 	}
 }
 
@@ -126,9 +131,10 @@ int main(int argc, char **argv, char **envp)
 	/* Process "boot" parameter (comma-separated list).
 	 * Note that we specify 20 retries (2 seconds), just in case it is
 	 * a hotplug device which takes some time to detect and initialize. */
-	char *boot = getenv("boot");
-	if (boot) {
-		if (multi_mount(boot, "/boot", BOOTFS_TYPE, MS_RDONLY, 20)) {
+	const char *boot_mount = "/boot";
+	char *boot_dev = getenv("boot");
+	if (boot_dev) {
+		if (multi_mount(boot_dev, boot_mount, BOOTFS_TYPE, MS_RDONLY, 20)) {
 			return -1;
 		}
 	} else {
@@ -136,7 +142,7 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
-	perform_updates(is_backup);
+	perform_updates(boot_mount, is_backup);
 
 	/* Get free loop device. */
 	int devnr = logetfree();
@@ -149,11 +155,13 @@ int main(int argc, char **argv, char **envp)
 	sprintf(loop_dev, "/dev/loop%i", devnr);
 
 	/* Set the rootfs as the backing file for the loop device. */
-	const char *rootfs =
+	const char *rootfs_img =
 		  is_backup && !access(ROOTFS_BACKUP, F_OK)
 		? ROOTFS_BACKUP
 		: ROOTFS_CURRENT;
-	losetup(loop_dev, rootfs);
+	char rootfs_path[strlen(boot_mount) + 1 + strlen(rootfs_img) + 1];
+	sprintf(rootfs_path, "%s/%s", boot_mount, rootfs_img);
+	losetup(loop_dev, rootfs_path);
 
 	/* Mount the loop device that was just set up. */
 	if (mount(loop_dev, "/root", ROOTFS_TYPE, MS_RDONLY, NULL)) {
@@ -161,11 +169,10 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
-	/* Move the /boot mountpoint so that it is visible
-	 * on the new filesystem tree */
-	DEBUG("Moving '/boot' mountpoint\n");
-	if (mount("/boot", "/root/boot", NULL, MS_MOVE, NULL)) {
-		ERROR("Unable to move the '/boot' mountpoint.\n");
+	/* Move the boot mount to inside the rootfs tree. */
+	DEBUG("Moving '%s' mount\n", boot_mount);
+	if (mount(boot_mount, "/root/boot", NULL, MS_MOVE, NULL)) {
+		ERROR("Unable to move the '%s' mount.\n", boot_mount);
 		return -1;
 	}
 
