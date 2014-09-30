@@ -231,8 +231,16 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
-	if ((chroot(".") < 0) || (chdir("/") < 0)) {
-		ERROR("'chroot' failed.\n");
+	/* Make the freshly switched root the root of this process. */
+	if (chroot(".")) {
+		ERROR("'chroot' to new root failed: %d\n", errno);
+		close(fd);
+		return -1;
+	}
+
+	/* And make it the working directory as well. */
+	if (chdir("/")) {
+		ERROR("'chdir' to new root failed: %d\n", errno);
 		close(fd);
 		return -1;
 	}
