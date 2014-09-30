@@ -186,15 +186,21 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
+	/* Make the freshly mounted rootfs image the working directory. */
+	if (chdir("/root")) {
+		ERROR("Unable to change to '/root' directory: %d\n", errno);
+		return -1;
+	}
+
 	/* Move the devtmpfs mount to inside the rootfs tree. */
 	DEBUG("Moving '/dev' mount\n");
-	if (mount("/dev", "/root/dev", NULL, MS_MOVE, NULL)) {
+	if (mount("/dev", "dev", NULL, MS_MOVE, NULL)) {
 		ERROR("Unable to move the '/dev' mount.\n");
 		return -1;
 	}
 
 	/* Re-open the console device at the new location. */
-	int fd = open("/root/dev/console", O_RDWR, 0);
+	int fd = open("dev/console", O_RDWR, 0);
 	if (fd < 0) {
 		ERROR("Unable to re-open console.\n");
 		return -1;
@@ -207,18 +213,13 @@ int main(int argc, char **argv, char **envp)
 
 	/* Move the boot mount to inside the rootfs tree. */
 	DEBUG("Moving '%s' mount\n", boot_mount);
-	if (mount(boot_mount, "/root/boot", NULL, MS_MOVE, NULL)) {
+	if (mount(boot_mount, "boot", NULL, MS_MOVE, NULL)) {
 		ERROR("Unable to move the '%s' mount.\n", boot_mount);
 		return -1;
 	}
 
 	/* Now let's switch to the new root */
 	DEBUG("Switching root\n");
-
-	if (chdir("/root") < 0) {
-		ERROR("Unable to change to '/root' directory.\n");
-		return -1;
-	}
 
 	/* Keep the old root open until the chroot is done */
 	fd = open("/", O_RDONLY, 0);
