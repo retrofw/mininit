@@ -128,10 +128,19 @@ int main(int argc, char **argv, char **envp)
 		}
 	}
 
+	/* Create boot mount point. */
+	const char *boot_mount = "/boot";
+	if (mkdir(boot_mount, 0755)) {
+		if (errno != EEXIST) {
+			WARNING("Failed to create '%s' mount point: %d\n",
+					boot_mount, errno);
+			/* This is probably fatal. */
+		}
+	}
+
 	/* Process "boot" parameter (comma-separated list).
 	 * Note that we specify 20 retries (2 seconds), just in case it is
 	 * a hotplug device which takes some time to detect and initialize. */
-	const char *boot_mount = "/boot";
 	char *boot_dev = getenv("boot");
 	if (boot_dev) {
 		if (multi_mount(boot_dev, boot_mount, BOOTFS_TYPE, MS_RDONLY, 20)) {
@@ -143,6 +152,14 @@ int main(int argc, char **argv, char **envp)
 	}
 
 	perform_updates(boot_mount, is_backup);
+
+	/* Create root mount point. */
+	if (mkdir("/root", 0755)) {
+		if (errno != EEXIST) {
+			WARNING("Failed to create /root' mount point: %d\n", errno);
+			/* This is probably fatal. */
+		}
+	}
 
 	/* Get free loop device. */
 	int devnr = logetfree();
