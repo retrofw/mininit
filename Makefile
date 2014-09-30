@@ -1,7 +1,7 @@
 CFLAGS ?= -std=c99 -Wall -O2 -fomit-frame-pointer
 LDFLAGS = -s -static
 
-BINARIES = mininit splashkill
+BINARIES = mininit-initramfs mininit-syspart splashkill
 
 M_OBJS = mininit.o loop.o
 S_OBJS = splashkill.o
@@ -13,9 +13,13 @@ all: $(BINARIES)
 clean:
 	rm -f $(M_OBJS) $(S_OBJS) $(BINARIES)
 
-mininit: $(M_OBJS)
+mininit-initramfs: $(M_OBJS) initramfs.o
+mininit-syspart: $(M_OBJS) syspart.o
 splashkill: $(S_OBJS)
 
 # Don't bother with fine-grained dependency tracking: just recompile everything
 # on any header change.
-$(M_OBJS) $(S_OBJS): $(wildcard *.h)
+$(M_OBJS) initramfs.o syspart.o $(S_OBJS): $(wildcard *.h)
+
+$(BINARIES):
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.o,$^)

@@ -20,9 +20,8 @@
 
 #include "debug.h"
 #include "loop.h"
+#include "mininit.h"
 
-
-#define BOOTFS_TYPE    "vfat"
 
 #define ROOTFS_TYPE    "squashfs"
 #define ROOTFS_CURRENT "rootfs." ROOTFS_TYPE
@@ -30,33 +29,7 @@
 #define ROOTFS_UPDATE  "update_r.bin"
 
 
-static int multi_mount(
-		char *source,
-		const char *target,
-		const char *type,
-		unsigned long flags,
-		int retries)
-{
-	for (int try = 0; try < retries; usleep(100000), try++) {
-		for (char c = ',', *s = source; c == ','; *s++ = c) {
-			char *t;
-			for (t = s; *s != ',' && *s != '\0'; s++);
-			c = *s;
-			*s = '\0';
-
-			if (!mount(t, target, type, flags, NULL)) {
-				INFO("%s mounted on %s\n", t, target);
-				*s = c;
-				return 0;
-			}
-		}
-	}
-
-	ERROR("Cannot mount %s on %s\n", source, target);
-	return -1;
-}
-
-static int create_mount_point(const char *path)
+int create_mount_point(const char *path)
 {
 	if (mkdir(path, 0755)) {
 		if (errno != EEXIST) {
@@ -66,7 +39,6 @@ static int create_mount_point(const char *path)
 	}
 	return 0;
 }
-
 
 void perform_updates(const char *boot_mount, bool is_backup)
 {
@@ -126,8 +98,8 @@ int main(int argc, char **argv, char **envp)
 	DEBUG("Mounting /dev\n");
 	if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL)) {
 		INFO("Couldn't mount devtmpfs on /dev: %d\n", errno);
-		/* If there are sufficient static device nodes in the initramfs,
-		 * we can boot without devtmpfs. */
+		/* If there are sufficient static device nodes in the fs containing
+		 * mininit, we can boot without devtmpfs, so don't give up yet. */
 	}
 
 	/* Look for "rootfs_bak" parameter. */
@@ -139,23 +111,8 @@ int main(int argc, char **argv, char **envp)
 		}
 	}
 
-	/* Create boot and root mount points.
-	 * Failure is most likely fatal, but perhaps mkdir on a usable mount point
-	 * could return something other than EEXIST when trying to recreate it. */
-	const char *boot_mount = "/boot";
-	create_mount_point(boot_mount);
-	create_mount_point("/root");
-
-	/* Process "boot" parameter (comma-separated list).
-	 * Note that we specify 20 retries (2 seconds), just in case it is
-	 * a hotplug device which takes some time to detect and initialize. */
-	char *boot_dev = getenv("boot");
-	if (boot_dev) {
-		if (multi_mount(boot_dev, boot_mount, BOOTFS_TYPE, MS_RDONLY, 20)) {
-			return -1;
-		}
-	} else {
-		ERROR("'boot' parameter not found.\n");
+	const char *boot_mount = mount_boot();
+	if (!boot_mount) {
 		return -1;
 	}
 
@@ -211,61 +168,52 @@ int main(int argc, char **argv, char **envp)
 	}
 	if (fd > 2) close(fd);
 
-	/* Move the boot mount to inside the rootfs tree. */
-	DEBUG("Moving '%s' mount\n", boot_mount);
-	if (mount(boot_mount, "boot", NULL, MS_MOVE, NULL)) {
-		ERROR("Unable to move the '%s' mount.\n", boot_mount);
-		return -1;
-	}
+	/* Open the old root while we can still access it. */
+	fd = open_dir_to_clean();
 
 	/* Now let's switch to the new root */
-	DEBUG("Switching root\n");
-
-	/* Keep the old root open until the chroot is done */
-	fd = open("/", O_RDONLY, 0);
-
-	/* Do the root switch */
-	if (mount(".", "/", NULL, MS_MOVE, NULL)) {
-		ERROR("Unable to switch to the new root.\n");
-		close(fd);
+	if (switch_root()) {
+		if (fd >= 0) close(fd);
 		return -1;
 	}
 
 	/* Make the freshly switched root the root of this process. */
 	if (chroot(".")) {
 		ERROR("'chroot' to new root failed: %d\n", errno);
-		close(fd);
+		if (fd >= 0) close(fd);
 		return -1;
 	}
 
 	/* And make it the working directory as well. */
 	if (chdir("/")) {
 		ERROR("'chdir' to new root failed: %d\n", errno);
-		close(fd);
+		if (fd >= 0) close(fd);
 		return -1;
 	}
 
 	/* Clean up the initramfs and then release it. */
-	DEBUG("Removing initramfs contents\n");
-	const char *executable = argv[0];
-	while (*executable == '/') ++executable;
-	if (unlinkat(fd, executable, 0)) {
-		DEBUG("Failed to remove '%s' executable: %d\n", executable, errno);
-	}
-	if (unlinkat(fd, "dev/console", 0)) {
-		DEBUG("Failed to remove '/dev/console': %d\n", errno);
-	}
-	if (unlinkat(fd, "dev", AT_REMOVEDIR)) {
-		DEBUG("Failed to remove '/dev' directory: %d\n", errno);
-	}
-	if (unlinkat(fd, "boot", AT_REMOVEDIR)) {
-		DEBUG("Failed to remove '/boot' mount point: %d\n", errno);
-	}
-	if (unlinkat(fd, "root", AT_REMOVEDIR)) {
-		DEBUG("Failed to remove '/root' directory: %d\n", errno);
-	}
-	if (close(fd)) {
-		DEBUG("Failed to close initramfs: %d\n", errno);
+	if (fd >= 0) {
+		DEBUG("Removing initramfs contents\n");
+		const char *executable = argv[0];
+		while (*executable == '/') ++executable;
+		if (unlinkat(fd, executable, 0)) {
+			DEBUG("Failed to remove '%s' executable: %d\n", executable, errno);
+		}
+		if (unlinkat(fd, "dev/console", 0)) {
+			DEBUG("Failed to remove '/dev/console': %d\n", errno);
+		}
+		if (unlinkat(fd, "dev", AT_REMOVEDIR)) {
+			DEBUG("Failed to remove '/dev' directory: %d\n", errno);
+		}
+		if (unlinkat(fd, "boot", AT_REMOVEDIR)) {
+			DEBUG("Failed to remove '/boot' mount point: %d\n", errno);
+		}
+		if (unlinkat(fd, "root", AT_REMOVEDIR)) {
+			DEBUG("Failed to remove '/root' directory: %d\n", errno);
+		}
+		if (close(fd)) {
+			DEBUG("Failed to close initramfs: %d\n", errno);
+		}
 	}
 
 	/* Try to locate the init program. */

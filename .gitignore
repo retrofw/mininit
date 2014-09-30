@@ -1,3 +1,4 @@
-mininit
+mininit-initramfs
+mininit-syspart
 splashkill
 *.o
