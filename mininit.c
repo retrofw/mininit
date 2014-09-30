@@ -169,6 +169,25 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
+	/* Move the devtmpfs mount to inside the rootfs tree. */
+	DEBUG("Moving '/dev' mount\n");
+	if (mount("/dev", "/root/dev", NULL, MS_MOVE, NULL)) {
+		ERROR("Unable to move the '/dev' mount.\n");
+		return -1;
+	}
+
+	/* Re-open the console device at the new location. */
+	int fd = open("/root/dev/console", O_RDWR, 0);
+	if (fd < 0) {
+		ERROR("Unable to re-open console.\n");
+		return -1;
+	}
+	if (dup2(fd, 0) != 0 || dup2(fd, 1) != 1 || dup2(fd, 2) != 2) {
+		ERROR("Unable to duplicate console handles.\n");
+		return -1;
+	}
+	if (fd > 2) close(fd);
+
 	/* Move the boot mount to inside the rootfs tree. */
 	DEBUG("Moving '%s' mount\n", boot_mount);
 	if (mount(boot_mount, "/root/boot", NULL, MS_MOVE, NULL)) {
@@ -183,22 +202,6 @@ int main(int argc, char **argv, char **envp)
 		ERROR("Unable to change to '/root' directory.\n");
 		return -1;
 	}
-
-	/* Re-open the console device at the new location
-	 * (must already exist). */
-	int fd = open("/root/dev/console", O_RDWR, 0);
-	if (fd < 0) {
-		ERROR("Unable to re-open console.\n");
-		return -1;
-	}
-
-	if ((dup2(fd, 0) != 0)
-			|| (dup2(fd, 1) != 1)
-			|| (dup2(fd, 2) != 2)) {
-		ERROR("Unable to duplicate console handles.\n");
-		return -1;
-	}
-	if (fd > 2) close(fd);
 
 	/* Keep the old root open until the chroot is done */
 	fd = open("/", O_RDONLY, 0);
