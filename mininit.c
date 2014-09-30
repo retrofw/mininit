@@ -56,6 +56,17 @@ static int multi_mount(
 	return -1;
 }
 
+static int create_mount_point(const char *path)
+{
+	if (mkdir(path, 0755)) {
+		if (errno != EEXIST) {
+			WARNING("Failed to create '%s' mount point: %d\n", path, errno);
+			return -1;
+		}
+	}
+	return 0;
+}
+
 
 void perform_updates(const char *boot_mount, bool is_backup)
 {
@@ -128,15 +139,12 @@ int main(int argc, char **argv, char **envp)
 		}
 	}
 
-	/* Create boot mount point. */
+	/* Create boot and root mount points.
+	 * Failure is most likely fatal, but perhaps mkdir on a usable mount point
+	 * could return something other than EEXIST when trying to recreate it. */
 	const char *boot_mount = "/boot";
-	if (mkdir(boot_mount, 0755)) {
-		if (errno != EEXIST) {
-			WARNING("Failed to create '%s' mount point: %d\n",
-					boot_mount, errno);
-			/* This is probably fatal. */
-		}
-	}
+	create_mount_point(boot_mount);
+	create_mount_point("/root");
 
 	/* Process "boot" parameter (comma-separated list).
 	 * Note that we specify 20 retries (2 seconds), just in case it is
@@ -152,14 +160,6 @@ int main(int argc, char **argv, char **envp)
 	}
 
 	perform_updates(boot_mount, is_backup);
-
-	/* Create root mount point. */
-	if (mkdir("/root", 0755)) {
-		if (errno != EEXIST) {
-			WARNING("Failed to create /root' mount point: %d\n", errno);
-			/* This is probably fatal. */
-		}
-	}
 
 	/* Get free loop device. */
 	int devnr = logetfree();
