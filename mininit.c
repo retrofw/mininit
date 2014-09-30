@@ -236,8 +236,28 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
-	/* Release the old root */
-	close(fd);
+	/* Clean up the initramfs and then release it. */
+	DEBUG("Removing initramfs contents\n");
+	const char *executable = argv[0];
+	while (*executable == '/') ++executable;
+	if (unlinkat(fd, executable, 0)) {
+		DEBUG("Failed to remove '%s' executable: %d\n", executable, errno);
+	}
+	if (unlinkat(fd, "dev/console", 0)) {
+		DEBUG("Failed to remove '/dev/console': %d\n", errno);
+	}
+	if (unlinkat(fd, "dev", AT_REMOVEDIR)) {
+		DEBUG("Failed to remove '/dev' directory: %d\n", errno);
+	}
+	if (unlinkat(fd, "boot", AT_REMOVEDIR)) {
+		DEBUG("Failed to remove '/boot' mount point: %d\n", errno);
+	}
+	if (unlinkat(fd, "root", AT_REMOVEDIR)) {
+		DEBUG("Failed to remove '/root' directory: %d\n", errno);
+	}
+	if (close(fd)) {
+		DEBUG("Failed to close initramfs: %d\n", errno);
+	}
 
 	/* Try to locate the init program. */
 	const char *inits[] = {
