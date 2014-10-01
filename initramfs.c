@@ -1,4 +1,5 @@
 #define _BSD_SOURCE
+#define _GNU_SOURCE
 
 #include <sys/mount.h>
 #include <sys/types.h>
@@ -11,6 +12,10 @@
 
 #ifndef MS_MOVE
 #define MS_MOVE 8192
+#endif
+
+#ifndef O_PATH
+#define O_PATH 010000000
 #endif
 
 #include "debug.h"
@@ -74,7 +79,7 @@ const char *mount_boot()
 
 int open_dir_to_clean()
 {
-	int fd = open("/", O_RDONLY, 0);
+	int fd = open("/", O_PATH | O_DIRECTORY);
 	if (fd < 0) {
 		DEBUG("Failed to open '/' before switch: %d\n", errno);
 	}
