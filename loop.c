@@ -13,15 +13,15 @@ int logetfree()
 {
 	int fd = open("/dev/loop-control", O_RDWR);
 	if (fd < 0) {
-		WARNING("Failed to open /dev/loop-control.\n");
+		WARNING("Failed to open '/dev/loop-control': %d\n", fd);
 		return -1;
 	}
 
 	int devnr = ioctl(fd, LOOP_CTL_GET_FREE);
 	if (devnr < 0) {
-		WARNING("Failed to acquire free loop device.\n");
+		WARNING("Failed to acquire free loop device: %d\n", devnr);
 	} else {
-		DEBUG("Got free loop device: %d.\n", devnr);
+		DEBUG("Got free loop device: %d\n", devnr);
 	}
 
 	close(fd);
@@ -30,24 +30,24 @@ int logetfree()
 
 int losetup(const char *loop, const char *file)
 {
-	DEBUG("Setting up loop: '%s' via '%s'.\n", file, loop);
+	DEBUG("Setting up loop: '%s' via '%s'\n", file, loop);
 
 	int filefd = open(file, O_RDONLY);
 	if (filefd < 0) {
-		ERROR("losetup: cannot open '%s'.\n", file);
+		ERROR("losetup: cannot open '%s': %d\n", file, filefd);
 		return -1;
 	}
 
 	int loopfd = open(loop, O_RDONLY);
 	if (loopfd < 0) {
-		ERROR("losetup: cannot open '%s'.\n", loop);
+		ERROR("losetup: cannot open '%s': %d\n", loop, loopfd);
 		close(filefd);
 		return -1;
 	}
 
 	int res = ioctl(loopfd, LOOP_SET_FD, filefd);
 	if (res < 0) {
-		ERROR("Cannot setup loop device '%s'.\n", loop);
+		ERROR("Cannot setup loop device '%s': %d\n", loop, res);
 	}
 
 	close(loopfd);

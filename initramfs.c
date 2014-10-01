@@ -70,7 +70,7 @@ const char *mount_boot()
 			return NULL;
 		}
 	} else {
-		ERROR("'boot' parameter not found.\n");
+		ERROR("'boot' parameter not found\n");
 		return NULL;
 	}
 

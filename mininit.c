@@ -42,8 +42,8 @@ int create_mount_point(const char *path)
 
 void perform_updates(const char *boot_mount, bool is_backup)
 {
-	if (chdir(boot_mount) < 0) {
-		ERROR("Unable to change to '%s' directory.\n", boot_mount);
+	if (chdir(boot_mount)) {
+		ERROR("Unable to change to '%s' directory: %d\n", boot_mount, errno);
 		return;
 	}
 
@@ -53,12 +53,12 @@ void perform_updates(const char *boot_mount, bool is_backup)
 
 	DEBUG("Remounting '%s' read-write\n", boot_mount);
 	if (mount(NULL, boot_mount, NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
-		ERROR("Unable to remount '%s' read-write.\n", boot_mount);
+		ERROR("Unable to remount '%s' read-write: %d\n", boot_mount, errno);
 		return;
 	}
 
 	if (update_modules) {
-		DEBUG("Modules update found!\n");
+		DEBUG("Modules update found\n");
 		rename("modules.squashfs", "modules.squashfs.bak");
 		rename("modules.squashfs.sha1", "modules.squashfs.bak.sha1");
 		rename("update_m.bin", "modules.squashfs");
@@ -66,7 +66,7 @@ void perform_updates(const char *boot_mount, bool is_backup)
 	}
 
 	if (update_rootfs) {
-		DEBUG("RootFS update found!\n");
+		DEBUG("RootFS update found\n");
 
 		/* If rootfs_bak was not passed, or the backup is not available,
 		 * make a backup of the current rootfs before the update */
@@ -83,7 +83,7 @@ void perform_updates(const char *boot_mount, bool is_backup)
 
 	DEBUG("Remounting '%s' read-only\n", boot_mount);
 	if (mount(NULL, boot_mount, NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
-		ERROR("Unable to remount '%s' read-only.\n", boot_mount);
+		ERROR("Unable to remount '%s' read-only: %d\n", boot_mount, errno);
 	}
 }
 
@@ -140,7 +140,7 @@ int main(int argc, char **argv, char **envp)
 
 	/* Mount the loop device that was just set up. */
 	if (mount(loop_dev, "/root", ROOTFS_TYPE, MS_RDONLY, NULL)) {
-		ERROR("Failed to mount the rootfs image.\n");
+		ERROR("Failed to mount the rootfs image: %d\n", errno);
 		return -1;
 	}
 
@@ -153,18 +153,18 @@ int main(int argc, char **argv, char **envp)
 	/* Move the devtmpfs mount to inside the rootfs tree. */
 	DEBUG("Moving '/dev' mount\n");
 	if (mount("/dev", "dev", NULL, MS_MOVE, NULL)) {
-		ERROR("Unable to move the '/dev' mount.\n");
+		ERROR("Unable to move the '/dev' mount: %d\n", errno);
 		return -1;
 	}
 
 	/* Re-open the console device at the new location. */
 	int fd = open("dev/console", O_RDWR, 0);
 	if (fd < 0) {
-		ERROR("Unable to re-open console.\n");
+		ERROR("Unable to re-open console: %d\n", fd);
 		return -1;
 	}
 	if (dup2(fd, 0) != 0 || dup2(fd, 1) != 1 || dup2(fd, 2) != 2) {
-		ERROR("Unable to duplicate console handles.\n");
+		ERROR("Unable to duplicate console handles\n");
 		return -1;
 	}
 	if (fd > 2) close(fd);
@@ -227,7 +227,7 @@ int main(int argc, char **argv, char **envp)
 	};
 	for (int i = 0; ; i++) {
 		if (!inits[i]) {
-			ERROR("Unable to find the 'init' executable.\n");
+			ERROR("Unable to find the 'init' executable\n");
 			return -1;
 		}
 		if (!access(inits[i], X_OK)) {
@@ -239,6 +239,6 @@ int main(int argc, char **argv, char **envp)
 
 	/* Execute the 'init' executable */
 	execvpe(argv[0], argv, envp);
-	ERROR("exec or init failed.\n");
+	ERROR("Exec of 'init' failed: %d\n", errno);
 	return 0;
 }
