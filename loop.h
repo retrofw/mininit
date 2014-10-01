@@ -5,7 +5,7 @@
  * Find or allocate a free loop device.
  * Returns the minor block device number (0-255), or -1 on errors.
  */
-int logetfree();
+int logetfree(void);
 
 /**
  * Set the given file as a backing file for the given loop device.

@@ -1,4 +1,5 @@
-CFLAGS ?= -std=c99 -Wall -O2 -fomit-frame-pointer
+CFLAGS = -std=c99 -O2 -fomit-frame-pointer
+CFLAGS += -Wall -Wextra -Wundef -Wold-style-definition
 LDFLAGS = -s -static
 
 BINARIES = mininit-initramfs mininit-syspart splashkill

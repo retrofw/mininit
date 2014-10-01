@@ -9,7 +9,7 @@
 #include "loop.h"
 
 
-int logetfree()
+int logetfree(void)
 {
 	int fd = open("/dev/loop-control", O_RDWR);
 	if (fd < 0) {

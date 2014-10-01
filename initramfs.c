@@ -53,7 +53,7 @@ static int multi_mount(
 	return -1;
 }
 
-const char *mount_boot()
+const char *mount_boot(void)
 {
 	/* Create boot and root mount points.
 	 * Failure is most likely fatal, but perhaps mkdir on a usable mount point
@@ -77,7 +77,7 @@ const char *mount_boot()
 	return boot_mount;
 }
 
-int open_dir_to_clean()
+int open_dir_to_clean(void)
 {
 	int fd = open("/", O_PATH | O_DIRECTORY);
 	if (fd < 0) {
@@ -86,7 +86,7 @@ int open_dir_to_clean()
 	return fd;
 }
 
-int switch_root()
+int switch_root(void)
 {
 	DEBUG("Switching root\n");
 

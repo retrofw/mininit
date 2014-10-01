@@ -10,17 +10,17 @@
 #include "mininit.h"
 
 
-const char *mount_boot()
+const char *mount_boot(void)
 {
 	return "/";
 }
 
-int open_dir_to_clean()
+int open_dir_to_clean(void)
 {
 	return -1;
 }
 
-int switch_root()
+int switch_root(void)
 {
 	DEBUG("Pivoting root\n");
 	if (syscall(SYS_pivot_root, ".", "boot")) {

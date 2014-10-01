@@ -31,7 +31,7 @@ static void quit_hdl(int err)
 	exit(err);
 }
 
-static int waitForEnter()
+static int waitForEnter(void)
 {
 	fd = open(event_fn, O_RDONLY);
 	if (fd < 0) {
@@ -60,6 +60,7 @@ int main(int argc, char **argv)
 	if (fork())
 		execl(init_fn, "/init", NULL);
 
+	(void)argc;
 	strlcpy(argv[0], process_name, strlen(argv[0]));
 
 	int res = waitForEnter();
