@@ -47,8 +47,12 @@ static int waitForEnter()
 	return 0;
 }
 
+FILE *logfile;
+
 int main(int argc, char **argv)
 {
+	logfile = stderr;
+
 	signal(SIGINT,  &quit_hdl);
 	signal(SIGSEGV, &quit_hdl);
 	signal(SIGTERM, &quit_hdl);

@@ -83,19 +83,28 @@ void perform_updates(bool is_backup)
 }
 
 
+FILE *logfile;
+
 int main(int argc, char **argv, char **envp)
 {
-	INFO("OpenDingux mininit 1.1.0 "
-			"by Ignacio Garcia Perez <iggarpe@gmail.com>, "
-			"Paul Cercueil <paul@crapouillou.net> and "
-			"Maarten ter Huurne <maarten@treewalker.org>\n");
+	logfile = stderr;
 
 	/* Mount devtmpfs to get a full set of device nodes. */
-	DEBUG("Mounting /dev\n");
 	if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL)) {
 		INFO("Couldn't mount devtmpfs on /dev: %d\n", errno);
 		/* If there are sufficient static device nodes in the fs containing
 		 * mininit, we can boot without devtmpfs, so don't give up yet. */
+	}
+
+	/* Write our log messages to the kernel log. */
+	FILE *kmsg = fopen("/dev/kmsg", "w");
+	if (kmsg) {
+		setlinebuf(kmsg);
+		logfile = kmsg;
+	}
+	INFO("OpenDingux mininit 1.1.0\n");
+	if (!kmsg) {
+		WARNING("Failed to open '/dev/kmsg': %d\n", errno);
 	}
 
 	/* Look for "rootfs_bak" parameter. */
@@ -137,10 +146,12 @@ int main(int argc, char **argv, char **envp)
 	losetup(loop_dev, rootfs_img);
 
 	/* Mount the loop device that was just set up. */
+	DEBUG("Loop-mounting '%s' on '/root'\n", rootfs_img);
 	if (mount(loop_dev, "/root", ROOTFS_TYPE, MS_RDONLY, NULL)) {
 		ERROR("Failed to mount the rootfs image: %d\n", errno);
 		return -1;
 	}
+	INFO("%s mounted on /root\n", rootfs_img);
 
 	/* Make the freshly mounted rootfs image the working directory. */
 	if (chdir("/root")) {
@@ -190,6 +201,8 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
+	INFO("root switch done\n");
+
 	/* Clean up the initramfs and then release it. */
 	if (fd >= 0) {
 		DEBUG("Removing initramfs contents\n");
@@ -228,15 +241,21 @@ int main(int argc, char **argv, char **envp)
 			ERROR("Unable to find the 'init' executable\n");
 			return -1;
 		}
+		DEBUG("Checking for 'init' executable: %s\n", inits[i]);
 		if (!access(inits[i], X_OK)) {
-			DEBUG("Found 'init' executable: %s\n", inits[i]);
 			argv[0] = (char *)inits[i];
 			break;
 		}
+	}
+	INFO("starting %s\n", argv[0]);
+
+	if (kmsg) {
+		logfile = stderr;
+		fclose(kmsg);
 	}
 
 	/* Execute the 'init' executable */
 	execvpe(argv[0], argv, envp);
 	ERROR("Exec of 'init' failed: %d\n", errno);
-	return 0;
+	return -1;
 }
