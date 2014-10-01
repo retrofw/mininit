@@ -103,6 +103,6 @@ If you want additional debug logging, see `LOG_LEVEL` in `debug.h`.
 Credits
 -------
 
-Developed for OpenDingux (http://www.treewalker.org/opendingux/) by Paul Cercueil <paul@crapouillou.net>.
+Developed for OpenDingux (https://github.com/opendingux/) by Paul Cercueil <paul@crapouillou.net> and Maarten ter Huurne <maarten@treewalker.org>.
 
-Based on mininit from Ignacio Garcia Perez (http://code.google.com/p/dingoo-linux/).
+Based on Dingux mininit (http://code.google.com/p/dingoo-linux/) by Ignacio Garcia Perez <iggarpe@gmail.com>.

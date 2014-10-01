@@ -90,9 +90,10 @@ void perform_updates(const char *boot_mount, bool is_backup)
 
 int main(int argc, char **argv, char **envp)
 {
-	INFO("\n\n\nOpenDingux min-init 1.1.0 "
-				"by Ignacio Garcia Perez <iggarpe@gmail.com> "
-				"and Paul Cercueil <paul@crapouillou.net>\n");
+	INFO("OpenDingux mininit 1.1.0 "
+			"by Ignacio Garcia Perez <iggarpe@gmail.com>, "
+			"Paul Cercueil <paul@crapouillou.net> and "
+			"Maarten ter Huurne <maarten@treewalker.org>\n");
 
 	/* Mount devtmpfs to get a full set of device nodes. */
 	DEBUG("Mounting /dev\n");
