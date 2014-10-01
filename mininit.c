@@ -40,20 +40,15 @@ int create_mount_point(const char *path)
 	return 0;
 }
 
-void perform_updates(const char *boot_mount, bool is_backup)
+void perform_updates(bool is_backup)
 {
-	if (chdir(boot_mount)) {
-		ERROR("Unable to change to '%s' directory: %d\n", boot_mount, errno);
-		return;
-	}
-
 	bool update_modules = !access("update_m.bin", R_OK);
 	bool update_rootfs = !access("update_r.bin", R_OK);
 	if (!update_modules && !update_rootfs) return;
 
-	DEBUG("Remounting '%s' read-write\n", boot_mount);
-	if (mount(NULL, boot_mount, NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
-		ERROR("Unable to remount '%s' read-write: %d\n", boot_mount, errno);
+	DEBUG("Remounting boot device read-write\n");
+	if (mount(NULL, ".", NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
+		ERROR("Unable to remount boot device read-write: %d\n", errno);
 		return;
 	}
 
@@ -81,9 +76,9 @@ void perform_updates(const char *boot_mount, bool is_backup)
 
 	sync();
 
-	DEBUG("Remounting '%s' read-only\n", boot_mount);
-	if (mount(NULL, boot_mount, NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
-		ERROR("Unable to remount '%s' read-only: %d\n", boot_mount, errno);
+	DEBUG("Remounting boot device read-only\n");
+	if (mount(NULL, ".", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
+		ERROR("Unable to remount boot device read-only: %d\n", errno);
 	}
 }
 
@@ -117,7 +112,12 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
-	perform_updates(boot_mount, is_backup);
+	if (chdir(boot_mount)) {
+		ERROR("Unable to change to '%s' directory: %d\n", boot_mount, errno);
+		return -1;
+	}
+
+	perform_updates(is_backup);
 
 	/* Get free loop device. */
 	int devnr = logetfree();
@@ -134,9 +134,7 @@ int main(int argc, char **argv, char **envp)
 		  is_backup && !access(ROOTFS_BACKUP, F_OK)
 		? ROOTFS_BACKUP
 		: ROOTFS_CURRENT;
-	char rootfs_path[strlen(boot_mount) + 1 + strlen(rootfs_img) + 1];
-	sprintf(rootfs_path, "%s/%s", boot_mount, rootfs_img);
-	losetup(loop_dev, rootfs_path);
+	losetup(loop_dev, rootfs_img);
 
 	/* Mount the loop device that was just set up. */
 	if (mount(loop_dev, "/root", ROOTFS_TYPE, MS_RDONLY, NULL)) {
