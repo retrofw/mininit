@@ -42,43 +42,50 @@ int create_mount_point(const char *path)
 
 void perform_updates(bool is_backup)
 {
+	bool boot_ro = access(".", W_OK) && errno == EROFS;
 	bool update_modules = !access("update_m.bin", R_OK);
 	bool update_rootfs = !access("update_r.bin", R_OK);
-	if (!update_modules && !update_rootfs) return;
 
-	DEBUG("Remounting boot device read-write\n");
-	if (mount(NULL, ".", NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
-		ERROR("Unable to remount boot device read-write: %d\n", errno);
-		return;
-	}
-
-	if (update_modules) {
-		DEBUG("Modules update found\n");
-		rename("modules.squashfs", "modules.squashfs.bak");
-		rename("modules.squashfs.sha1", "modules.squashfs.bak.sha1");
-		rename("update_m.bin", "modules.squashfs");
-		rename("update_m.bin.sha1", "modules.squashfs.sha1");
-	}
-
-	if (update_rootfs) {
-		DEBUG("RootFS update found\n");
-
-		/* If rootfs_bak was not passed, or the backup is not available,
-		 * make a backup of the current rootfs before the update */
-		if (!is_backup || access(ROOTFS_BACKUP, F_OK)) {
-			rename(ROOTFS_CURRENT, ROOTFS_BACKUP);
-			rename(ROOTFS_CURRENT ".sha1", ROOTFS_BACKUP ".sha1");
+	if (update_modules || update_rootfs) {
+		if (boot_ro) {
+			INFO("remounting boot device read-write\n");
+			if (mount(NULL, ".", NULL, MS_REMOUNT | MS_NOATIME, NULL)) {
+				ERROR("Unable to remount boot device read-write: %d\n", errno);
+				return;
+			}
+			boot_ro = false;
 		}
 
-		rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
-		rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
+		if (update_modules) {
+			INFO("performing modules update\n");
+			rename("modules.squashfs", "modules.squashfs.bak");
+			rename("modules.squashfs.sha1", "modules.squashfs.bak.sha1");
+			rename("update_m.bin", "modules.squashfs");
+			rename("update_m.bin.sha1", "modules.squashfs.sha1");
+		}
+
+		if (update_rootfs) {
+			INFO("performing rootfs update\n");
+
+			/* If rootfs_bak was not passed, or the backup is not available,
+			* make a backup of the current rootfs before the update */
+			if (!is_backup || access(ROOTFS_BACKUP, F_OK)) {
+				rename(ROOTFS_CURRENT, ROOTFS_BACKUP);
+				rename(ROOTFS_CURRENT ".sha1", ROOTFS_BACKUP ".sha1");
+			}
+
+			rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
+			rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
+		}
+
+		sync();
 	}
 
-	sync();
-
-	DEBUG("Remounting boot device read-only\n");
-	if (mount(NULL, ".", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
-		ERROR("Unable to remount boot device read-only: %d\n", errno);
+	if (!boot_ro) {
+		INFO("remounting boot device read-only\n");
+		if (mount(NULL, ".", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
+			ERROR("Unable to remount boot device read-only: %d\n", errno);
+		}
 	}
 }
 
