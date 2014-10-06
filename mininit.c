@@ -109,7 +109,7 @@ int main(int argc, char **argv, char **envp)
 		setlinebuf(kmsg);
 		logfile = kmsg;
 	}
-	INFO("OpenDingux mininit 1.1.0\n");
+	INFO("OpenDingux mininit 2.0.0\n");
 	if (!kmsg) {
 		WARNING("Failed to open '/dev/kmsg': %d\n", errno);
 	}
