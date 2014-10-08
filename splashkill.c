@@ -1,5 +1,3 @@
-#define _BSD_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +59,7 @@ int main(int argc, char **argv)
 		execl(init_fn, "/init", NULL);
 
 	(void)argc;
-	strlcpy(argv[0], process_name, strlen(argv[0]));
+	strncpy(argv[0], process_name, strlen(argv[0]));
 
 	int res = waitForEnter();
 	if (res)
