@@ -1,5 +1,6 @@
-CFLAGS = -std=c99 -O2 -fomit-frame-pointer
-CFLAGS += -Wall -Wextra -Wundef -Wold-style-definition
+# CFLAGS can be overridden, CFLAGS_NOCUST should be left untouched.
+CFLAGS ?= -O2 -fomit-frame-pointer
+CFLAGS_NOCUST = -std=c99 -Wall -Wextra -Wundef -Wold-style-definition
 LDFLAGS = -s -static
 
 BINARIES = mininit-initramfs mininit-syspart splashkill
@@ -23,5 +24,8 @@ splashkill: $(S_OBJS)
 # on any header change.
 $(OBJS): $(wildcard *.h)
 
+$(OBJS): %.o: %.c
+	$(CC) $(CFLAGS_NOCUST) $(CFLAGS) -o $@ -c $<
+
 $(BINARIES):
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.o,$^)
+	$(CC) $(CFLAGS_NOCUST) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.o,$^)
