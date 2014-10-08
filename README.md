@@ -106,3 +106,8 @@ Credits
 Developed for OpenDingux (https://github.com/opendingux/) by Paul Cercueil <paul@crapouillou.net> and Maarten ter Huurne <maarten@treewalker.org>.
 
 Based on Dingux mininit (http://code.google.com/p/dingoo-linux/) by Ignacio Garcia Perez <iggarpe@gmail.com>.
+
+License
+-------
+
+Mininit is licensed under the 2-clause BSD license. See the file `license.txt` for details.
