@@ -6,13 +6,14 @@ BINARIES = mininit-initramfs mininit-syspart splashkill
 
 M_OBJS = mininit.o loop.o
 S_OBJS = splashkill.o
+OBJS := $(M_OBJS) initramfs.o syspart.o $(S_OBJS)
 
 .PHONY: all clean
 
 all: $(BINARIES)
 
 clean:
-	rm -f $(M_OBJS) $(S_OBJS) $(BINARIES)
+	rm -f $(OBJS) $(BINARIES)
 
 mininit-initramfs: $(M_OBJS) initramfs.o
 mininit-syspart: $(M_OBJS) syspart.o
@@ -20,7 +21,7 @@ splashkill: $(S_OBJS)
 
 # Don't bother with fine-grained dependency tracking: just recompile everything
 # on any header change.
-$(M_OBJS) initramfs.o syspart.o $(S_OBJS): $(wildcard *.h)
+$(OBJS): $(wildcard *.h)
 
 $(BINARIES):
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.o,$^)
