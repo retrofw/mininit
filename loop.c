@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <linux/loop.h>
+#include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -9,6 +10,8 @@
 #include "loop.h"
 
 
+// Note: klibc demands the third ioctl arg to be a void*.
+
 int logetfree(void)
 {
 	int fd = open("/dev/loop-control", O_RDWR);
@@ -17,7 +20,7 @@ int logetfree(void)
 		return -1;
 	}
 
-	int devnr = ioctl(fd, LOOP_CTL_GET_FREE);
+	int devnr = ioctl(fd, LOOP_CTL_GET_FREE, NULL);
 	if (devnr < 0) {
 		WARNING("Failed to acquire free loop device: %d\n", devnr);
 	} else {
@@ -45,7 +48,7 @@ int losetup(const char *loop, const char *file)
 		return -1;
 	}
 
-	int res = ioctl(loopfd, LOOP_SET_FD, filefd);
+	int res = ioctl(loopfd, LOOP_SET_FD, (void *)(intptr_t)filefd);
 	if (res < 0) {
 		ERROR("Cannot setup loop device '%s': %d\n", loop, res);
 	}
