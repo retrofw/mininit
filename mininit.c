@@ -106,7 +106,9 @@ int main(int argc, char **argv, char **envp)
 	/* Write our log messages to the kernel log. */
 	FILE *kmsg = fopen("/dev/kmsg", "w");
 	if (kmsg) {
+#ifndef __KLIBC__
 		setlinebuf(kmsg);
+#endif /* __KLIBC__ */
 		logfile = kmsg;
 	}
 	INFO("OpenDingux mininit 2.0.1\n");
