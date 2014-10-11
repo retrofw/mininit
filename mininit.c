@@ -111,7 +111,7 @@ int main(int argc, char **argv, char **envp)
 #endif /* __KLIBC__ */
 		logfile = kmsg;
 	}
-	INFO("OpenDingux mininit 2.0.1\n");
+	INFO("OpenDingux mininit 2.0.2\n");
 	if (!kmsg) {
 		WARNING("Failed to open '/dev/kmsg': %d\n", errno);
 	}
