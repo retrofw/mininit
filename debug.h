@@ -19,8 +19,12 @@
 
 extern FILE *logfile;
 
+#define LOG_BUF_SIZE 256
+extern char logbuf[LOG_BUF_SIZE];
+
 #define OUTPUT_LOG_MSG(LEVEL, ...) do { \
-	fprintf(logfile, LEVEL "mininit: " __VA_ARGS__); \
+	snprintf(logbuf, sizeof(logbuf), LEVEL "mininit: " __VA_ARGS__); \
+	fprintf(logfile, logbuf); \
 	} while (0)
 
 #if LOG_LEVEL >= DEBUG_L

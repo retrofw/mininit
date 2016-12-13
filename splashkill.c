@@ -46,6 +46,7 @@ static int waitForEnter(void)
 }
 
 FILE *logfile;
+char logbuf[LOG_BUF_SIZE];
 
 int main(int argc, char **argv)
 {

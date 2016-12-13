@@ -91,6 +91,7 @@ void perform_updates(bool is_backup)
 
 
 FILE *logfile;
+char logbuf[LOG_BUF_SIZE];
 
 int main(int argc, char **argv, char **envp)
 {
