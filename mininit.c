@@ -76,6 +76,9 @@ void perform_updates(bool is_backup)
 
 			rename(ROOTFS_UPDATE, ROOTFS_CURRENT);
 			rename(ROOTFS_UPDATE ".sha1", ROOTFS_CURRENT ".sha1");
+
+			chown(ROOTFS_CURRENT, 0, 0);
+			chmod(ROOTFS_CURRENT, 0444);
 		}
 
 		sync();
