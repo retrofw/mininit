@@ -14,13 +14,16 @@
 
 int logetfree(void)
 {
+	int devnr = 0;
+
+#ifndef NO_LOOPCONTROL
 	int fd = open("/dev/loop-control", O_RDWR);
 	if (fd < 0) {
 		WARNING("Failed to open '/dev/loop-control': %d\n", fd);
 		return -1;
 	}
 
-	int devnr = ioctl(fd, LOOP_CTL_GET_FREE, NULL);
+	devnr = ioctl(fd, LOOP_CTL_GET_FREE, NULL);
 	if (devnr < 0) {
 		WARNING("Failed to acquire free loop device: %d\n", devnr);
 	} else {
@@ -28,6 +31,8 @@ int logetfree(void)
 	}
 
 	close(fd);
+#endif
+
 	return devnr;
 }
 
