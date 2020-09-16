@@ -84,12 +84,14 @@ void perform_updates(bool is_backup)
 		sync();
 	}
 
+#if 0
 	if (!boot_ro) {
 		INFO("remounting boot device read-only\n");
 		if (mount(NULL, ".", NULL, MS_REMOUNT | MS_RDONLY, NULL)) {
 			ERROR("Unable to remount boot device read-only: %d\n", errno);
 		}
 	}
+#endif
 }
 
 
