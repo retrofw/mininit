@@ -100,12 +100,44 @@ int main(int argc, char **argv, char **envp)
 {
 	logfile = stderr;
 
+#ifndef NO_DEVTMPFS
 	/* Mount devtmpfs to get a full set of device nodes. */
 	if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL) && errno != EBUSY) {
 		INFO("Couldn't mount devtmpfs on /dev: %d\n", errno);
 		/* If there are sufficient static device nodes in the fs containing
 		 * mininit, we can boot without devtmpfs, so don't give up yet. */
 	}
+
+#else
+	/* Mount devtmpfs to get a full set of device nodes. */
+	if (mount("tmpfs", "/dev", "tmpfs", 0, NULL) && errno != EBUSY) {
+		INFO("Couldn't mount devtmpfs on /dev: %d\n", errno);
+		/* If there are sufficient static device nodes in the fs containing
+		 * mininit, we can boot without devtmpfs, so don't give up yet. */
+	}
+	dev_t device;
+
+	device = makedev(1, 11);
+	mknod("/dev/kmsg", S_IFCHR | 644, device);
+
+	device = makedev(5, 1);
+	mknod("/dev/console", S_IFCHR | 644, device);
+
+	device = makedev(7, 0);
+	mknod("/dev/loop0", S_IFBLK| 644, device);
+
+	device = makedev(179, 0);
+	mknod("/dev/mmcblk0", S_IFBLK| 644, device);
+
+	device = makedev(179, 1);
+	mknod("/dev/mmcblk0p1", S_IFBLK| 644, device);
+
+	device = makedev(179, 2);
+	mknod("/dev/mmcblk0p2", S_IFBLK| 644, device);
+
+	device = makedev(179, 3);
+	mknod("/dev/mmcblk0p3", S_IFBLK| 644, device);
+#endif
 
 	/* Write our log messages to the kernel log. */
 	FILE *kmsg = fopen("/dev/kmsg", "w");
@@ -172,12 +204,14 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 
+#ifndef NO_DEVTMPFS
 	/* Move the devtmpfs mount to inside the rootfs tree. */
 	DEBUG("Moving '/dev' mount\n");
 	if (mount("/dev", "dev", NULL, MS_MOVE, NULL)) {
 		ERROR("Unable to move the '/dev' mount: %d\n", errno);
 		return -1;
 	}
+#endif
 
 	/* Re-open the console device at the new location. */
 	int fd = open("dev/console", O_RDWR, 0);
