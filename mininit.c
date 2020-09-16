@@ -98,6 +98,9 @@ char logbuf[LOG_BUF_SIZE];
 
 int main(int argc, char **argv, char **envp)
 {
+	mkdir("/dev", 0755);
+	mkdir("/root", 0755);
+
 	logfile = stderr;
 
 #ifndef NO_DEVTMPFS
@@ -197,6 +200,8 @@ int main(int argc, char **argv, char **envp)
 		return -1;
 	}
 	INFO("%s mounted on /root\n", rootfs_img);
+
+	unlink("/dev");
 
 	/* Make the freshly mounted rootfs image the working directory. */
 	if (chdir("/root")) {
