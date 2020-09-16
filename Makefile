@@ -1,7 +1,7 @@
 CC	?= $(CROSS_COMPILE)gcc
 
 # CFLAGS can be overridden, CFLAGS_NOCUST should be left untouched.
-CFLAGS ?= -O2 -fomit-frame-pointer
+CFLAGS ?= -O2 -fomit-frame-pointer -DLOG_LEVEL=0 -DNO_LOOPCONTROL
 CFLAGS_NOCUST = -std=c99 -Wall -Wextra -Wundef -Wold-style-definition
 LDFLAGS = -s -static
 
